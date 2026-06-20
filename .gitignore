@@ -1,0 +1,10 @@
+# 含 bot token 與群組 id 的本機設定 — 絕對不進版控
+config.json
+
+# 本機產出
+*.html
+summary-*.json
+
+# 系統 / 相依
+.DS_Store
+node_modules/
