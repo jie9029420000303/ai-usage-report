@@ -35,6 +35,31 @@
 
 ---
 
+## 4️⃣ 設定每週自動執行（強烈建議）
+
+不想每週記得手動打字？設定一次,之後**每週一 13:00 自動產生並推送**,完全不用管。
+
+**Mac**:在 `ai-usage-report` 資料夾裡開「終端機」,貼上這行:
+```bash
+bash setup-schedule.sh
+```
+
+**Windows**:在資料夾裡開「PowerShell」,貼上這行:
+```powershell
+powershell -ExecutionPolicy Bypass -File setup-schedule.ps1
+```
+
+設定完,**立刻測試一次**確認沒問題:
+- Mac:`launchctl start com.aiusagereport.weekly`
+- Windows:`Start-ScheduledTask -TaskName 'AI-Usage-Report-Weekly'`
+
+幾秒後看團隊群組有沒有收到你的週報,有就成功了 ✅
+
+> ⚠️ 自動執行那一刻,你的電腦要**開機**且 **claude 已登入**(睡眠/關機會跳過那一次)。
+> 取消自動執行:Mac 跑 `bash setup-schedule.sh --remove`;Windows 跑 `powershell -ExecutionPolicy Bypass -File setup-schedule.ps1 -Remove`。
+
+---
+
 ## 常見問題
 
 **Q：要每週做嗎？**
