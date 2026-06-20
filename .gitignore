@@ -5,6 +5,9 @@ config.json
 *.html
 summary-*.json
 
+# 含設定的部署包（內含 token，僅供私下分發，絕不進版控）
+*.zip
+
 # 系統 / 相依
 .DS_Store
 node_modules/
