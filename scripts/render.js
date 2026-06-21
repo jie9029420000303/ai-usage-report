@@ -5,7 +5,7 @@
  * 輸入：
  *   raw.json     collect.js 的輸出（meta / usage / sessions）
  *   labels.json  情境標籤對照 { sessionId: "情境名" }（由 Claude 自由歸納後寫入）
- *   config.json  { userName, plan, monthlyFeeUSD, usdToTwd }
+ *   config.json  { userName, usdToTwd, telegram }
  *
  * 輸出：一份自包含 HTML（內嵌 CSS 與 SVG 圖表，離線可開、可列印）
  *
@@ -29,7 +29,7 @@ if (!data) {
 }
 const labels = readJSON(labelsPath, {});
 const config = Object.assign(
-  { userName: '（未設定）', plan: '（未設定方案）', monthlyFeeUSD: 0, usdToTwd: 32 },
+  { userName: '（未設定）', usdToTwd: 32 },
   readJSON(configPath, {})
 );
 
@@ -70,8 +70,7 @@ const usage = data.usage || null;
 const tokenValueUSD = usage && usage.totals ? usage.totals.totalCost : null;
 const totalTokens = usage && usage.totals ? usage.totals.totalTokens : sessions.reduce((s, x) => s + x.tokens, 0);
 const daily = usage && Array.isArray(usage.daily) ? usage.daily : [];
-const fee = Number(config.monthlyFeeUSD) || 0;
-const roi = fee > 0 && tokenValueUSD != null ? tokenValueUSD / fee : null;
+// 已移除月租/ROI：改以 token 價值（每人實際用量、跨方案可比）為核心指標
 
 // 模型分布（跨日聚合 cost）
 const modelMap = new Map();
@@ -136,9 +135,9 @@ const m = data.meta || {};
 const twd = (usd) => '約 NT$' + fmtInt((usd || 0) * (Number(config.usdToTwd) || 32));
 
 const summaryCards = [
-  { label: '月租費率', value: fee > 0 ? fmtUSD(fee) : '未設定', sub: fee > 0 ? esc(config.plan) + ' · ' + twd(fee) + '/月' : '請於 config 填寫' },
-  { label: '本期 Token 價值', value: tokenValueUSD != null ? fmtUSD(tokenValueUSD) : 'N/A', sub: tokenValueUSD != null ? '按 API 定價估算 · ' + twd(tokenValueUSD) : 'ccusage 未取得' },
-  { label: '投入產出比 (ROI)', value: roi != null ? roi.toFixed(1) + '×' : 'N/A', sub: roi != null ? '用量價值是月租的 ' + roi.toFixed(1) + ' 倍' : '需填月租費率' },
+  { label: '本期 Token 價值', value: tokenValueUSD != null ? fmtUSD(tokenValueUSD) : 'N/A', sub: tokenValueUSD != null ? 'API 定價估算 · ' + twd(tokenValueUSD) : 'ccusage 未取得' },
+  { label: '總 Token 量', value: fmtTok(totalTokens), sub: '輸入＋輸出＋快取' },
+  { label: '日均 Token 價值', value: tokenValueUSD != null && data.activeDays ? fmtUSD(tokenValueUSD / data.activeDays) : 'N/A', sub: '本期價值 ÷ 活躍天數' },
   { label: '活躍天數', value: data.activeDays + ' / ' + m.days, sub: '本期有實際使用的天數' },
   { label: '對話數', value: fmtInt(data.sessionCount), sub: '展開 ' + contexts.length + ' 類情境' },
   { label: '總提問次數', value: fmtInt(data.totalUserMessages), sub: '實際送出的指令／提問' },
@@ -205,7 +204,6 @@ const html = `<!doctype html>
   .card-label { font-size:13px; color:var(--muted); margin-bottom:6px; }
   .card-value { font-size:26px; font-weight:700; color:var(--ink); }
   .card-sub { font-size:12px; color:var(--muted); margin-top:4px; }
-  .roi-card .card-value { color:#16a34a; }
   .pie-row { display:flex; gap:28px; align-items:center; flex-wrap:wrap; }
   table { width:100%; border-collapse:collapse; font-size:14px; }
   th,td { padding:9px 10px; text-align:left; border-bottom:1px solid var(--line); }
@@ -233,7 +231,7 @@ const html = `<!doctype html>
   <header class="report">
     <h1>AI 使用週報</h1>
     <div class="meta">統計期間 ${esc(m.periodStart)} ～ ${esc(m.periodEnd)}（${esc(String(m.days))} 天） · 產生於 ${esc((m.generatedAt || '').slice(0, 16).replace('T', ' '))}</div>
-    <div class="who">使用者：<b>${esc(config.userName)}</b> · 方案 ${esc(config.plan)}</div>
+    <div class="who">使用者：<b>${esc(config.userName)}</b></div>
   </header>
 
   <section>

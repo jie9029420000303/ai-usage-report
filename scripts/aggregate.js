@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /*
- * aggregate.js — 主管端：把一個資料夾內的多份 summary-*.json 彙整成 ROI 排行榜 HTML
+ * aggregate.js — 主管端：把一個資料夾內的多份 summary-*.json 彙整成「Token 價值排行榜」HTML
  *
  * 用法： node aggregate.js <含 summary-*.json 的資料夾> > 排行榜.html
  *
- * 排行榜以 ROI 降序排列，顏色標示積極／普通／偏低，一頁看完誰積極誰混。
+ * 以本期 Token 價值（每人實際用量、跨方案可比）降序排列；
+ * 相對團隊平均標示積極／普通／偏低，一頁看完誰用得多誰在混。
  */
 const fs = require('fs');
 const path = require('path');
@@ -30,28 +31,27 @@ const rows = [];
 for (const f of files) {
   try { rows.push(JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))); } catch (e) { /* 跳過壞檔 */ }
 }
-rows.sort((a, b) => (b.roi || 0) - (a.roi || 0));
+rows.sort((a, b) => (b.tokenValueUSD || 0) - (a.tokenValueUSD || 0));
 
 // ---------- 工具 ----------
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtInt = (n) => Math.round(n || 0).toLocaleString('en-US');
 const fmtUSD = (n) => '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-// ROI 分級
-function tier(roi) {
-  if (roi == null) return { label: '無資料', cls: 'na' };
-  if (roi >= 5) return { label: '積極', cls: 'good' };
-  if (roi >= 2) return { label: '普通', cls: 'mid' };
+// 相對團隊平均分級（Token 價值無絕對標準，用相對平均最公平）
+const valid = rows.filter((r) => r.tokenValueUSD != null);
+const avg = valid.length ? valid.reduce((s, r) => s + r.tokenValueUSD, 0) / valid.length : 0;
+function tier(v) {
+  if (v == null || avg <= 0) return { label: '無資料', cls: 'na' };
+  if (v >= avg) return { label: '積極', cls: 'good' };
+  if (v >= avg * 0.5) return { label: '普通', cls: 'mid' };
   return { label: '偏低', cls: 'low' };
 }
-
-const valid = rows.filter((r) => r.roi != null);
-const avgRoi = valid.length ? valid.reduce((s, r) => s + r.roi, 0) / valid.length : 0;
 const period = rows[0] ? rows[0].period : '';
-const lowCount = valid.filter((r) => r.roi < 2).length;
+const lowCount = valid.filter((r) => r.tokenValueUSD < avg * 0.5).length;
 
 const tableRows = rows.map((r, i) => {
-  const t = tier(r.roi);
+  const t = tier(r.tokenValueUSD);
   const rank = i + 1;
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
   const ctx = (r.topContexts || []).slice(0, 2).map((c) => `${c[0]}(${c[1]})`).join('、');
@@ -59,8 +59,7 @@ const tableRows = rows.map((r, i) => {
   return `<tr class="t-${t.cls}">
     <td class="rank">${medal}</td>
     <td class="who"><div class="name">${esc(r.userName)}</div><div class="src">${src}</div></td>
-    <td class="roi"><span class="roi-val">${r.roi != null ? r.roi.toFixed(1) + '×' : '—'}</span></td>
-    <td class="num">${r.tokenValueUSD != null ? fmtUSD(r.tokenValueUSD) : '—'}</td>
+    <td class="val"><span class="val-num">${r.tokenValueUSD != null ? fmtUSD(r.tokenValueUSD) : '—'}</span></td>
     <td class="num">${fmtInt(r.sessions)}</td>
     <td class="num">${fmtInt(r.userMessages)}</td>
     <td class="num">${r.activeDays != null ? r.activeDays + '/' + r.days : '—'}</td>
@@ -96,10 +95,10 @@ const html = `<!doctype html>
   .rank { font-size:17px; font-weight:700; text-align:center; width:46px; color:#475569; }
   .who .name { font-weight:600; }
   .who .src { font-size:11.5px; color:#94a3b8; font-variant-numeric:tabular-nums; }
-  .roi-val { font-size:19px; font-weight:800; }
-  .t-good .roi-val { color:#16a34a; }
-  .t-mid .roi-val { color:#ca8a04; }
-  .t-low .roi-val { color:#dc2626; }
+  .val-num { font-size:18px; font-weight:800; }
+  .t-good .val-num { color:#16a34a; }
+  .t-mid .val-num { color:#ca8a04; }
+  .t-low .val-num { color:#dc2626; }
   .t-low { background:#fef2f2; }
   .ctx { color:#475569; font-size:12.5px; max-width:230px; }
   .badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; }
@@ -116,20 +115,20 @@ const html = `<!doctype html>
 <div class="wrap">
   <header class="r">
     <h1>AI 使用週報 · 團隊排行榜</h1>
-    <div class="meta">統計期間 ${esc(period)} · 共 ${rows.length} 人 · 依投入產出比（ROI）排序</div>
+    <div class="meta">統計期間 ${esc(period)} · 共 ${rows.length} 人 · 依本期 Token 價值排序</div>
   </header>
 
   <div class="kpis">
     <div class="kpi"><div class="l">參與人數</div><div class="v">${rows.length}</div></div>
-    <div class="kpi"><div class="l">平均 ROI</div><div class="v">${avgRoi.toFixed(1)}×</div></div>
-    <div class="kpi"><div class="l">最高 ROI</div><div class="v" style="color:#16a34a">${valid.length ? valid[0].roi.toFixed(1) + '×' : '—'}</div></div>
-    <div class="kpi"><div class="l">ROI 偏低（&lt;2×）</div><div class="v" style="color:${lowCount ? '#dc2626' : '#16a34a'}">${lowCount} 人</div></div>
+    <div class="kpi"><div class="l">團隊平均 Token 價值</div><div class="v">${fmtUSD(avg)}</div></div>
+    <div class="kpi"><div class="l">最高</div><div class="v" style="color:#16a34a">${valid.length ? fmtUSD(valid[0].tokenValueUSD) : '—'}</div></div>
+    <div class="kpi"><div class="l">偏低（未達平均一半）</div><div class="v" style="color:${lowCount ? '#dc2626' : '#16a34a'}">${lowCount} 人</div></div>
   </div>
 
   <section>
     <table>
       <thead><tr>
-        <th class="rank">#</th><th>成員</th><th>ROI</th><th class="num">Token 價值</th>
+        <th class="rank">#</th><th>成員</th><th>Token 價值</th>
         <th class="num">對話</th><th class="num">提問</th><th class="num">活躍</th><th>主要情境</th><th>狀態</th>
       </tr></thead>
       <tbody>${tableRows}</tbody>
@@ -137,8 +136,8 @@ const html = `<!doctype html>
   </section>
 
   <footer class="note">
-    <p>ROI＝該成員本期 Token 價值 ÷ 月租費率（衡量使用強度與投入產出，數字越高代表越積極運用 AI）。Token 價值為 ccusage 依 API 定價估算，非實際帳單。</p>
-    <p>分級：積極 ≥ 5× · 普通 2–5× · 偏低 &lt; 2×。資料來源為各成員本機系統日誌，每人一份 summary 檔彙整而成。</p>
+    <p>Token 價值＝該成員本期實際用量按 ccusage 公開 API 定價估算的對等金額（非實際帳單）。它只看「用了多少」、與訂閱方案無關，因此跨同事可直接比較、最公平。</p>
+    <p>分級為相對團隊平均：積極 ≥ 平均 · 普通 ≥ 平均一半 · 偏低 &lt; 平均一半。資料來源為各成員本機系統日誌，每人一份 summary 檔彙整而成。</p>
   </footer>
 </div>
 </body>

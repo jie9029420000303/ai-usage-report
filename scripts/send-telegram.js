@@ -31,8 +31,6 @@ if (!data) { console.error('send-telegram: 讀不到 raw.json'); process.exit(1)
 const m = data.meta || {};
 const totals = data.usage && data.usage.totals ? data.usage.totals : null;
 const tokenValue = totals ? totals.totalCost : null;
-const fee = Number(config.monthlyFeeUSD) || 0;
-const roi = fee > 0 && tokenValue != null ? tokenValue / fee : null;
 const twd = Number(config.usdToTwd) || 32;
 
 const cnt = {};
@@ -49,7 +47,6 @@ const summary = [
   tokenValue != null
     ? `💰 Token 價值 $${tokenValue.toFixed(2)}（≈ NT$${Math.round(tokenValue * twd).toLocaleString('en-US')}）`
     : '💰 Token 價值：未取得',
-  roi != null ? `📈 投入產出比 ROI ${roi.toFixed(1)}×（月租 $${fee}）` : null,
   `🔥 活躍 ${data.activeDays}/${m.days} 天 · ${data.sessionCount} 對話 · ${data.totalUserMessages} 提問`,
   top ? `🏷 主要情境：${top}` : null,
   m.account ? `🖥 來源：${m.account}@${m.host}` : null,

@@ -22,9 +22,6 @@ if (!data) { console.error('summarize: 讀不到 raw.json'); process.exit(1); }
 const m = data.meta || {};
 const totals = data.usage && data.usage.totals ? data.usage.totals : null;
 const tokenValueUSD = totals ? totals.totalCost : null;
-const fee = Number(config.monthlyFeeUSD) || 0;
-const roi = fee > 0 && tokenValueUSD != null ? tokenValueUSD / fee : null;
-
 const cnt = {};
 for (const s in labels) cnt[labels[s]] = (cnt[labels[s]] || 0) + 1;
 const topContexts = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -36,8 +33,6 @@ const summary = {
   period: `${m.periodStart}~${m.periodEnd}`,
   days: m.days,
   tokenValueUSD,
-  monthlyFeeUSD: fee,
-  roi,
   usdToTwd: Number(config.usdToTwd) || 32,
   activeDays: data.activeDays,
   sessions: data.sessionCount,
