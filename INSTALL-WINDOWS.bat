@@ -60,8 +60,12 @@ echo [OK] 名字已設定: %NAME%
 echo.
 powershell -ExecutionPolicy Bypass -File "%SKILL%\setup-schedule.ps1"
 echo.
+echo 正在跑第一份報告做測試（約 1-2 分鐘,請稍候,不要關視窗）...
+claude -p "產生我的 AI 使用週報" --permission-mode dontAsk --allowedTools "Skill Read Write Bash" >nul 2>nul && echo [OK] 測試完成! 去 Telegram 群組看有沒有收到你的報告 || echo [!] 自動測試沒成功,但技能已裝好;可稍後雙擊 TEST-WINDOWS.bat 再試
+echo.
 echo === 全部完成！===
-echo 打開 Claude Code，輸入「產生我的 AI 使用週報」可以立刻測一次。
+echo   - 之後每週一下午會自動跑並推送
+echo   - 想隨時手動測一次: 雙擊 TEST-WINDOWS.bat
 echo.
 pause
 endlocal
