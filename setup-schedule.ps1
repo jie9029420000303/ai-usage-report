@@ -27,6 +27,15 @@ if (-not (Test-Path $claudePath)) {
   exit 1
 }
 
+# ---- 讀取長期 OAuth token，設為使用者環境變數（headless 無人值守認證用）----
+$tokenFile = "$env:USERPROFILE\.claude\skills\ai-usage-report\.oauth-token"
+if (-not (Test-Path $tokenFile)) {
+  Write-Host "X 找不到授權 token（.oauth-token）。請先完成安裝的「授權」步驟（claude setup-token）。"
+  exit 1
+}
+$token = ((Get-Content $tokenFile -Raw) -replace '\s','')
+[Environment]::SetEnvironmentVariable("CLAUDE_CODE_OAUTH_TOKEN", $token, "User")
+
 # ---- 註冊每週一 13:00 的工作 ----
 $arg = '-p "產生我的 AI 使用週報" --permission-mode dontAsk --allowedTools "Skill Read Write Bash"'
 $action   = New-ScheduledTaskAction -Execute $claudePath -Argument $arg

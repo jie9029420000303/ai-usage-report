@@ -58,10 +58,22 @@ node -e "const fs=require('fs'),p=process.env.USERPROFILE+'/.claude/skills/ai-us
 echo [OK] 名字已設定: %NAME%
 
 echo.
+if exist "%SKILL%\.oauth-token" (
+  echo [OK] 已有授權 token
+) else (
+  echo == 授權（讓每週自動跑能用你的帳號）==
+  echo 待會會開瀏覽器登入授權；完成後會自動抓取 token（不必手動複製）。
+  pause
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$o = (claude setup-token 2>&1 | Out-String); Write-Host $o; $t = ([regex]'sk-ant-oat[0-9]+-[A-Za-z0-9_-]+').Match($o).Value; if ($t) { Set-Content -NoNewline -Path '%SKILL%\.oauth-token' -Value $t; Write-Host ('[OK] 授權完成，token ' + $t.Length + ' 字元') } else { Write-Host '[!] 自動抓取失敗，請聯絡管理者' }"
+)
+
+echo.
 powershell -ExecutionPolicy Bypass -File "%SKILL%\setup-schedule.ps1"
 echo.
-echo 正在跑第一份報告做測試（約 1-2 分鐘,請稍候,不要關視窗）...
-claude -p "產生我的 AI 使用週報" --permission-mode dontAsk --allowedTools "Skill Read Write Bash" >nul 2>nul && echo [OK] 測試完成! 去 Telegram 群組看有沒有收到你的報告 || echo [!] 自動測試沒成功,但技能已裝好;可稍後雙擊 TEST-WINDOWS.bat 再試
+echo 正在跑第一份報告做測試... 約 1-2 分鐘。視窗會靜止是正常的,請勿關閉。
+set /p TESTTOKEN=<"%SKILL%\.oauth-token"
+set "CLAUDE_CODE_OAUTH_TOKEN=%TESTTOKEN%"
+claude -p "產生我的 AI 使用週報" --permission-mode dontAsk --allowedTools "Skill Read Write Bash" && echo [OK] 測試完成! 去 Telegram 群組看有沒有收到你的報告 || echo [!] 自動測試沒成功;可稍後雙擊 TEST-WINDOWS.bat 再試
 echo.
 echo === 全部完成！===
 echo   - 之後每週一下午會自動跑並推送

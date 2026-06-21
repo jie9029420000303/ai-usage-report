@@ -29,6 +29,13 @@ if [ -z "$CLAUDE_BIN" ]; then
 fi
 NODE_DIR="$(dirname "$(command -v node 2>/dev/null || echo /usr/local/bin/node)")"
 
+# ---- 讀取長期 OAuth token（headless 認證用，無人值守必須）----
+TOKEN="$(tr -d '[:space:]' < "$HOME/.claude/skills/ai-usage-report/.oauth-token" 2>/dev/null)"
+if [ -z "$TOKEN" ]; then
+  echo "✗ 找不到授權 token（.oauth-token）。請先完成安裝的「授權」步驟（claude setup-token）。"
+  exit 1
+fi
+
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 
 # ---- 產生 launchd 設定（每週一 13:00）----
@@ -57,6 +64,7 @@ cat > "$PLIST" <<EOF
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key><string>$NODE_DIR:/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    <key>CLAUDE_CODE_OAUTH_TOKEN</key><string>$TOKEN</string>
   </dict>
   <key>WorkingDirectory</key><string>$HOME</string>
   <key>StandardOutPath</key><string>$LOG</string>

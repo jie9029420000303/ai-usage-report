@@ -8,6 +8,9 @@ summary-*.json
 # 含設定的部署包（內含 token，僅供私下分發，絕不進版控）
 *.zip
 
+# 長期 OAuth token（headless 認證用，每人各自產生，絕不進版控）
+.oauth-token
+
 # 系統 / 相依
 .DS_Store
 node_modules/
