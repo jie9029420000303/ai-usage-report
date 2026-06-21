@@ -8,10 +8,9 @@
 ## 開始前：先裝兩個東西
 
 1. **Node.js** — 到 <https://nodejs.org> 下載「LTS」版、雙擊安裝。
-2. **Claude Code** —
-   - **Mac**：開「終端機」貼這行按 Enter：`curl -fsSL https://claude.ai/install.sh | bash`
-   - **Windows**：開「PowerShell」貼這行按 Enter：`irm https://claude.ai/install.ps1 | iex`
-   - 裝完打一次 `claude`、完成登入。
+2. **Claude Code**（裝完 Node 就有 npm，一行搞定）——
+   - 開「終端機」（Mac）／「PowerShell」（Windows），貼這行按 Enter：`npm install -g @anthropic-ai/claude-code`
+   - 再打一次 `claude`、跟著完成登入。
 
 ## 拿兩個檔案
 
