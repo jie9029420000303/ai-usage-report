@@ -25,7 +25,9 @@
    - macOS：`INSTALL-MAC.command`
    - Windows：`INSTALL-WINDOWS.bat`
 
-   它會檢查環境 → 把技能裝進 `~/.claude/skills/` → 問你的名字 → 設定每週排程。
+   它會檢查環境 → 把技能裝進 `~/.claude/skills/` → 問你的名字 → **授權**（開瀏覽器登入、自動抓取長效 token）→ 設定每週排程 → 跑一次測試。
+
+> **「授權」那一步**：每週排程是「無人值守」在背景跑，需要一次性 `claude setup-token` 授權才能用你的帳號認證。安裝檔會自動處理——你只要在瀏覽器登入同意，token 會自動抓好（不必手動複製貼上）。若該步出現 `forkpty: Device not configured`，是開太多終端／Claude 視窗、系統 pty 用滿了，關掉幾個再重跑。
 
 > 手動安裝：把資料夾放到 `~/.claude/skills/ai-usage-report/`、複製 `config.example.json` 為 `config.json` 填好、在 Claude Code 說「產生我的 AI 使用週報」。
 
