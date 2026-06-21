@@ -36,6 +36,17 @@ if errorlevel 1 (
 )
 echo [OK] Claude Code 已安裝
 
+if not exist "%SELF%\config.json" (
+  echo [!] 找不到 config.json ^(裡面有連線設定^)
+  echo.
+  echo     請把主管私下給你的壓縮檔解開、把裡面的 config.json
+  echo     放進「這個資料夾」^(跟這個 .bat 放一起^)，再雙擊我一次。
+  echo.
+  pause
+  exit /b 1
+)
+echo [OK] 已找到設定檔 config.json
+
 if not exist "%USERPROFILE%\.claude\skills" mkdir "%USERPROFILE%\.claude\skills"
 robocopy "%SELF%" "%SKILL%" /E /XF *.bat *.command /XD .git >nul
 echo [OK] 技能已安裝到 .claude\skills

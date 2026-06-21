@@ -33,6 +33,17 @@ if ! command -v claude >/dev/null 2>&1; then
 fi
 echo "✓ Claude Code 已安裝"
 
+# 前提 3：主管私下給的 config.json（裡面有連線 token）
+if [ ! -f "$SELF/config.json" ]; then
+  echo "⚠️  找不到 config.json（裡面有連線設定）"
+  echo ""
+  echo "    請把主管私下給你的壓縮檔解開、把裡面的 config.json"
+  echo "    放進「這個資料夾」（跟 INSTALL-MAC.command 放一起），再雙擊我一次。"
+  echo ""
+  read -p "按 Enter 關閉"; exit 1
+fi
+echo "✓ 已找到設定檔 config.json"
+
 # 安裝技能到 skills 目錄（排除設定檔自己）
 mkdir -p "$HOME/.claude/skills"
 if command -v rsync >/dev/null 2>&1; then
