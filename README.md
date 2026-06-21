@@ -1,113 +1,90 @@
-# AI 使用週報技能（ai-usage-report）
+# AI 使用週報（ai-usage-report）
 
-一鍵把你在 **Claude Code** 的真實使用紀錄，整理成一份漂亮、可列印、難以造假的 HTML 週報——
-包含 token 價值、投入產出比（ROI）、使用情境分類與各情境呼叫次數、每日趨勢、模型分布。
+一個 **Claude Code 技能**：把你在 Claude Code 的真實使用量，自動整理成週報、推送到團隊 Telegram 群組，讓團隊的 AI 使用狀況可量化、可比較。
 
-資料直接讀本機系統日誌與 `ccusage`，**不是人工填報**，因此可作為「積極且正確使用 AI」的客觀證明。
+資料直接讀本機系統日誌與 `ccusage`，**不是人工填報**——用量、花費、情境都來自實際紀錄。
 
----
+## 功能
 
-## 安裝（一次性）
+- 📊 **使用週報**：Token 價值、每日趨勢、使用情境分類與各情境次數、模型分布，產出自包含 HTML（可列印）。
+- 🏷 **AI 情境分類**：由 Claude 讀對話標題自動歸納「這週用 AI 做了哪些事」。
+- 📱 **Telegram 推送**：報告摘要＋HTML 附件自動推到指定對話／群組。
+- 🏆 **團隊排行榜**：多人彙整成 Token 價值排行榜，相對團隊平均分級。
+- ⏰ **每週自動**：排程每週定時、無人值守跑並推送。
+- 🖱 **一鍵安裝**：雙擊安裝檔、輸入名字即完成。
 
-把整個 `ai-usage-report` 資料夾複製到你的 Claude Code 技能目錄：
+> 核心指標是 **Token 價值**（ccusage 按實際用量 × API 公開定價估算）——與訂閱方案無關、跨成員可公平比較。
 
-```bash
-# macOS / Linux
-cp -R ai-usage-report ~/.claude/skills/
-```
+## 安裝
 
-Windows 則複製到 `%USERPROFILE%\.claude\skills\ai-usage-report`。
+需求：**Node.js**（技能腳本與 ccusage 需要）、**Claude Code**（Pro/Max 訂閱）。
 
-> 需求：機器上要有 Node.js（Claude Code 環境本來就有）。`ccusage` 會由 `npx` 自動取得，無需另外安裝。
+1. 下載本 repo（綠色 **Code → Download ZIP**）並解壓。
+2. 取得管理者提供的 `config.json`（含 Telegram 連線設定），放進資料夾。
+3. 雙擊一鍵安裝檔：
+   - macOS：`INSTALL-MAC.command`
+   - Windows：`INSTALL-WINDOWS.bat`
 
-## 首次設定
+   它會檢查環境 → 把技能裝進 `~/.claude/skills/` → 問你的名字 → 設定每週排程。
 
-第一次使用時，技能會問你四個問題並建立 `config.json`：
-
-| 欄位 | 說明 | 範例 |
-|------|------|------|
-| `userName` | 報告抬頭的姓名 | 王小明 |
-| `plan` | 你的訂閱方案 | Claude Max 20x |
-| `monthlyFeeUSD` | 月租美元 | Pro=20、Max 5x=100、Max 20x=200 |
-| `usdToTwd` | 美元兌台幣匯率 | 32 |
-
-也可以直接複製 `config.example.json` 成 `config.json` 自行填好。
+> 手動安裝：把資料夾放到 `~/.claude/skills/ai-usage-report/`、複製 `config.example.json` 為 `config.json` 填好、在 Claude Code 說「產生我的 AI 使用週報」。
 
 ## 使用
 
-在 Claude Code 對話框輸入任一句：
+在 Claude Code 說：「**產生我的 AI 使用週報**」（月報說「這個月」＝30 天）。報告會產出 HTML，並（若已設定）推到 Telegram。
 
-```
-產生我的 AI 使用週報
-```
-```
-跑一份 AI 使用報告給我
-```
+## 設定（config.json）
 
-要月報就說「**產生我這個月的 AI 使用報告**」（統計 30 天）。
+| 欄位 | 說明 |
+|------|------|
+| `userName` | 報告抬頭的姓名 |
+| `usdToTwd` | 美元兌台幣匯率（顯示用，預設 32） |
+| `telegram.botToken` / `chatId` | Telegram 推送目標（用 `scripts/setup-telegram.js <botToken>` 自動設定） |
+| `aggregateDir` | （選用）多人摘要的共享收集資料夾 |
 
-報告會輸出到你的家目錄 `~/AI使用週報-YYYYMMDD.html`，並自動用瀏覽器打開。
-交給主管時，直接把這個 HTML 檔寄出，或在瀏覽器列印成 PDF 即可。
+## 團隊排行榜（主管端）
 
----
+每人跑技能會輸出 `summary-<帳號>.json`；主管收集後跑：
 
-## 設定 Telegram 自動推送（選用，推薦）
-
-讓報告產出後**自動推送到主管的 Telegram**——同事端零設定，主管手機即時收到摘要與報告檔。
-
-### 主管做一次（約 5 分鐘）
-
-1. 在 Telegram 搜尋 **@BotFather**，傳 `/newbot`，依指示替 bot 命名（例如 `AI 使用週報`）與設帳號（例如 `my_ai_report_bot`）。
-2. BotFather 會給你一段 **bot token**（格式像 `123456789:ABCdef...`），複製起來。
-3. 用你的 Telegram **對剛建立的 bot 傳一句話**（任意，例如「hi」）。想收進群組就改成：建群組、把 bot 加進去、在群組發一則訊息。
-4. 在終端機執行設定精靈（會自動抓 chat_id、寫入設定、發測試訊息）：
-   ```bash
-   node ~/.claude/skills/ai-usage-report/scripts/setup-telegram.js <貼上 bot token>
-   ```
-   看到 Telegram 收到 ✅ 測試訊息就完成了。
-
-### 部署給同事
-
-把已設定好 `telegram` 的整個資料夾複製給同事即可——**bot token 與 chat_id 已內建，同事完全不用碰推送設定**，跑技能就會自動推到主管的 Telegram。
-
-> 安全性：bot token 只能對你指定的對話發訊息、權限受限；它存在本機 `config.json`，請勿放進公開版控。
-
-## 多人部署與團隊排行榜（主管專用）
-
-多位同事可共用同一個 bot，報告全部推到主管的同一個 Telegram 群組；每則開頭都有姓名與來源帳號，方便辨識、難造假。
-
-### 多人收件設定
-1. 主管建一個 Telegram 群組（如「AI 使用週報」），把 bot 加進去。
-2. 在**群組裡**對 bot 發一句話，再跑 `setup-telegram.js <botToken>`，它會抓到「群組的 chat_id」。
-3. 把設定好的技能複製給每位同事，各自只需把 config 的 `userName` 改成本人。
-
-### 彙整成 ROI 排行榜
-每位同事跑技能時會自動吐出一份 `summary-<帳號>.json`（落點為 `config.aggregateDir`，未設則在家目錄）。主管把這些檔收集到一個資料夾後，跑：
 ```bash
-node ~/.claude/skills/ai-usage-report/scripts/aggregate.js <收集資料夾> > ~/AI週報排行榜.html
+node scripts/aggregate.js <收集資料夾> > 排行榜.html
 ```
-即產出一張**團隊排行榜**——依 ROI 排序、顏色標示積極／普通／偏低，一頁看完誰積極誰在混。
 
-> 收集 summary 的兩種方式：(1) 在 `config.aggregateDir` 填一個**共享資料夾**（如同步的 Google Drive 路徑），同事的摘要自動寫進去、主管直接彙整；(2) 同事各自把家目錄的 summary 檔傳給主管，集中後再彙整。
+產出依 **Token 價值**降序的團隊排行榜，相對團隊平均分級（積極 ≥ 平均／普通 ≥ 半均／偏低 < 半均）。
 
-## 重要前提與限制
+## 每週自動排程
 
-- **只統計 Claude Code 內的使用。** 在 claude.ai 網頁版、ChatGPT 等其他平台的使用，不會出現在報告裡。要讓報告有數據，你必須實際在 Claude Code 內工作。
-- **Token 價值是估算。** 訂閱制吃到飽、平台不揭露逐筆 token 計費；報告金額是 `ccusage` 依公開 API 定價的對等換算，用來衡量使用強度與 ROI，不是實際帳單。
-- **不含對話內文。** 報告只呈現對話標題與統計數字，腳本已過濾掉程式組裝的結構化內容，不會洩漏本機路徑或私密內容。
+```bash
+bash setup-schedule.sh                                        # macOS（launchd）
+powershell -ExecutionPolicy Bypass -File setup-schedule.ps1   # Windows（工作排程器）
+```
+
+預設每週一 13:00 用 headless `claude -p` 無人值守跑技能並推送。執行當下需電腦開機、`claude` 已登入。
+
+## 前提與限制
+
+- **只統計 Claude Code 內的使用**：claude.ai 網頁版等其他平台不計入。
+- **Token 價值是估算**：ccusage 依公開 API 定價對等換算，非實際帳單。
+- **不含對話內文**：只呈現對話標題與統計；腳本已過濾程式組裝內容，不洩漏本機路徑。
+- **`config.json` 含 token，請勿放進公開版控**（已由 `.gitignore` 擋住）。
 
 ## 檔案結構
 
 ```
 ai-usage-report/
-├── SKILL.md             技能定義與執行流程
-├── README.md            本說明
-├── config.example.json  設定檔範本
+├── SKILL.md                技能定義與執行流程
+├── INSTALL.md              安裝說明（給使用者）
+├── config.example.json     設定檔範本
+├── INSTALL-MAC.command     一鍵安裝（macOS，雙擊）
+├── INSTALL-WINDOWS.bat     一鍵安裝（Windows，雙擊）
+├── setup-schedule.sh       每週排程設定（macOS）
+├── setup-schedule.ps1      每週排程設定（Windows）
+├── deploy.sh               （開發用）同步 repo 到技能目錄
 └── scripts/
-    ├── collect.js        資料收集（跑 ccusage + 掃日誌）
-    ├── render.js         產出 HTML 報告
-    ├── summarize.js      輸出精簡摘要 JSON（供彙整）
-    ├── send-telegram.js  推送報告到 Telegram
-    ├── setup-telegram.js Telegram 一次性設定精靈
-    └── aggregate.js      主管端：彙整多人 ROI 排行榜
+    ├── collect.js          資料收集（ccusage + 掃日誌）
+    ├── render.js           產出 HTML 報告
+    ├── summarize.js        輸出精簡摘要（供彙整）
+    ├── aggregate.js        主管端：Token 價值排行榜
+    ├── send-telegram.js    推送到 Telegram
+    └── setup-telegram.js   Telegram 設定精靈
 ```
