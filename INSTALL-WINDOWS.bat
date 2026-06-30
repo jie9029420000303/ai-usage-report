@@ -1,83 +1,80 @@
 @echo off
-rem INSTALL-WINDOWS.bat — AI 使用週報 一鍵設定（Windows，雙擊執行）
 chcp 65001 >nul
-setlocal
+setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 set "SELF=%cd%"
 set "SKILL=%USERPROFILE%\.claude\skills\ai-usage-report"
 cls
 echo ====================================
-echo    AI 使用週報 - 一鍵設定 (Windows)
+echo    AI Weekly Report - Setup (Windows)
 echo ====================================
 echo.
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [!] 還沒安裝 Node.js ^(技能需要它才能跑^)
-  echo.
-  echo     請先到  https://nodejs.org
-  echo     下載 LTS 版、雙擊安裝；裝完再回來雙擊我。
-  echo.
+  echo [!] Node.js not found.
+  echo     Please install from https://nodejs.org then run this again.
   pause
   exit /b 1
 )
-echo [OK] Node.js 已安裝
+echo [OK] Node.js found
 
 where claude >nul 2>nul
 if errorlevel 1 (
-  echo [!] 還沒安裝 Claude Code
-  echo.
-  echo     請打開 PowerShell，貼這行按 Enter 安裝：
-  echo       irm https://claude.ai/install.ps1 ^| iex
-  echo     裝完打一次  claude  完成登入，再回來雙擊我。
-  echo.
+  echo [!] Claude Code not found.
+  echo     Open PowerShell and run:  irm https://claude.ai/install.ps1 ^| iex
+  echo     Then run  claude  once to log in, then run this again.
   pause
   exit /b 1
 )
-echo [OK] Claude Code 已安裝
+echo [OK] Claude Code found
 
 if not exist "%SELF%\config.json" (
-  echo [!] 找不到 config.json ^(裡面有連線設定^)
-  echo.
-  echo     請把主管私下給你的壓縮檔解開、把裡面的 config.json
-  echo     放進「這個資料夾」^(跟這個 .bat 放一起^)，再雙擊我一次。
-  echo.
+  echo [!] config.json not found in this folder.
+  echo     Put config.json here then run this again.
   pause
   exit /b 1
 )
-echo [OK] 已找到設定檔 config.json
+echo [OK] config.json found
 
 if not exist "%USERPROFILE%\.claude\skills" mkdir "%USERPROFILE%\.claude\skills"
 robocopy "%SELF%" "%SKILL%" /E /XF *.bat *.command /XD .git >nul
-echo [OK] 技能已安裝到 .claude\skills
+echo [OK] Skill copied to .claude\skills
 
 echo.
-set /p NAME=請輸入你的名字（會顯示在週報上）:
-set "NAME_ENV=%NAME%"
-node -e "const fs=require('fs'),p=process.env.USERPROFILE+'/.claude/skills/ai-usage-report/config.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));if(process.env.NAME_ENV)c.userName=process.env.NAME_ENV;fs.writeFileSync(p,JSON.stringify(c,null,2));"
-echo [OK] 名字已設定: %NAME%
+set /p NAME=Enter your name (shown on report):
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p='%SKILL%\config.json';$c=Get-Content $p -Raw -Encoding UTF8|ConvertFrom-Json;$c.userName='%NAME%';$c|ConvertTo-Json -Depth 10|Set-Content -Encoding UTF8 $p"
+echo [OK] Name saved: %NAME%
 
 echo.
 if exist "%SKILL%\.oauth-token" (
-  echo [OK] 已有授權 token
+  echo [OK] OAuth token already exists
 ) else (
-  echo == 授權（讓每週自動跑能用你的帳號）==
-  echo 待會會開瀏覽器登入授權；完成後會自動抓取 token（不必手動複製）。
+  echo == Authorization ==
+  echo A browser will open. Log in and approve. Token will be saved automatically.
   pause
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$o = (claude setup-token 2>&1 | Out-String); Write-Host $o; $t = ([regex]'sk-ant-oat[0-9]+-[A-Za-z0-9_-]+').Match($o).Value; if ($t) { Set-Content -NoNewline -Path '%SKILL%\.oauth-token' -Value $t; Write-Host ('[OK] 授權完成，token ' + $t.Length + ' 字元') } else { Write-Host '[!] 自動抓取失敗，請聯絡管理者' }"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$o=(claude setup-token 2>&1|Out-String);Write-Host $o;$t=([regex]'sk-ant-oat[0-9]+-[A-Za-z0-9_-]+').Match($o).Value;if($t){Set-Content -NoNewline -Path '%SKILL%\.oauth-token' -Value $t;Write-Host('[OK] Token saved, length: '+$t.Length)}else{Write-Host '[!] Auto-capture failed, contact admin'}"
 )
 
 echo.
-powershell -ExecutionPolicy Bypass -File "%SKILL%\setup-schedule.ps1"
+if exist "%SKILL%\setup-schedule.ps1" (
+  powershell -ExecutionPolicy Bypass -File "%SKILL%\setup-schedule.ps1"
+)
+
 echo.
-echo 正在跑第一份報告做測試... 約 1-2 分鐘。視窗會靜止是正常的,請勿關閉。
+echo Running first report as test... (1-2 min, do not close window)
 set /p TESTTOKEN=<"%SKILL%\.oauth-token"
 set "CLAUDE_CODE_OAUTH_TOKEN=%TESTTOKEN%"
-claude -p "產生我的 AI 使用週報" --permission-mode dontAsk --allowedTools "Skill Read Write Bash" && echo [OK] 測試完成! 去 Telegram 群組看有沒有收到你的報告 || echo [!] 自動測試沒成功;可稍後雙擊 TEST-WINDOWS.bat 再試
+claude -p "Generate my AI usage weekly report" --permission-mode dontAsk --allowedTools "Skill Read Write Bash"
+if errorlevel 1 (
+  echo [!] Test did not complete. Try double-clicking TEST-WINDOWS.bat later.
+) else (
+  echo [OK] Done! Check your Telegram group for the report.
+)
 echo.
-echo === 全部完成！===
-echo   - 之後每週一下午會自動跑並推送
-echo   - 想隨時手動測一次: 雙擊 TEST-WINDOWS.bat
+echo === Setup complete! ===
+echo   - Report runs automatically every Monday afternoon
+echo   - To run manually: double-click TEST-WINDOWS.bat
 echo.
 pause
 endlocal
